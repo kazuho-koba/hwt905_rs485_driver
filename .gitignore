@@ -1,0 +1,30 @@
+# ROS2 build artifacts
+build/
+install/
+log/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Editor/IDE settings
+.vscode/
+.idea/
+
+# Packaging / distribution
+*.egg-info/
+*.eggs/
+dist/
+*.log
+
+# OS-specific
+.DS_Store
+
+# Colcon metadata
+.colcon/
+
+# pytest / coverage
+.pytest_cache/
+coverage/
+htmlcov/
+
