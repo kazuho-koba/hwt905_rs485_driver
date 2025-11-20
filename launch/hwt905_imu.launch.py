@@ -13,11 +13,11 @@ def generate_launch_description():
     )
 
     baud_arg = DeclareLaunchArgument(
-        "baud", default_value="115200", description="IMU のボーレート"
+        "baud", default_value="230400", description="IMU のボーレート"
     )
 
     poll_hz_arg = DeclareLaunchArgument(
-        "poll_hz", default_value="200", description="出力周波数"
+        "poll_hz", default_value="100.0", description="出力周波数"
     )
 
     frame_id_arg = DeclareLaunchArgument(
@@ -29,7 +29,7 @@ def generate_launch_description():
     # TF用の親子フレーム
     parent_frame_arg = DeclareLaunchArgument(
         "parent_frame",
-        default_value="world",
+        default_value="base_link",
         description="TFの親フレーム名",
     )
 
