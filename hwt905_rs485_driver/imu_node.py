@@ -141,9 +141,18 @@ class Hwt905ImuNode(Node):
             angle_degree = [v[i] / 32768.0 * 180.0 for i in range(9, 12)]
             angle_radian = [deg * math.pi / 180.0 for deg in angle_degree]
 
-            qua = quaternion_from_euler(
-                angle_radian[0], angle_radian[1], angle_radian[2]
-            )
+            # IMUが出しているroll/pitch/yaw (IMU座標系)
+            roll_imu = angle_radian[0]  # IMU X軸まわり
+            pitch_imu = angle_radian[1]  # IMU Y軸まわり
+            yaw_imu = angle_radian[2]  # IMU Z軸まわり
+
+            # 観測結果に合わせて ROS 座標系に変換
+            # X を回すと Y が正向きに回る、Y を回すと X が逆向きに回る、Yaw は符号反転
+            roll_ros = -pitch_imu  # IMUのY軸回転 → ROSのX軸回転（符号反転）
+            pitch_ros = roll_imu  # IMUのX軸回転 → ROSのY軸回転（符号そのまま）
+            yaw_ros = -yaw_imu  # Yaw は符号反転
+
+            qua = quaternion_from_euler(roll_ros, pitch_ros, yaw_ros)
 
             # タイムスタンプとframe_id設定
             stamp = self.get_clock().now().to_msg()
@@ -177,14 +186,26 @@ class Hwt905ImuNode(Node):
             # covariance
             self.imu_msg.orientation_covariance = [-1.0] + [0.0] * 8
             self.imu_msg.angular_velocity_covariance = [
-                3e-08, 0.0, 0.0,
-                0.0, 5e-08, 0.0,
-                0.0, 0.0, 6e-08
+                3e-08,
+                0.0,
+                0.0,
+                0.0,
+                5e-08,
+                0.0,
+                0.0,
+                0.0,
+                6e-08,
             ]
             self.imu_msg.linear_acceleration_covariance = [
-                8e-06, 0.0, 0.0,
-                0.0, 6e-06, 0.0,
-                0.0, 0.0, 4e-06
+                8e-06,
+                0.0,
+                0.0,
+                0.0,
+                6e-06,
+                0.0,
+                0.0,
+                0.0,
+                4e-06,
             ]
             # Publish
             self.imu_pub.publish(self.imu_msg)
