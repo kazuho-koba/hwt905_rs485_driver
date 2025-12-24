@@ -146,11 +146,10 @@ class Hwt905ImuNode(Node):
             pitch_imu = angle_radian[1]  # IMU Y軸まわり
             yaw_imu = angle_radian[2]  # IMU Z軸まわり
 
-            # 観測結果に合わせて ROS 座標系に変換
-            # X を回すと Y が正向きに回る、Y を回すと X が逆向きに回る、Yaw は符号反転
-            roll_ros = -pitch_imu  # IMUのY軸回転 → ROSのX軸回転（符号反転）
-            pitch_ros = roll_imu  # IMUのX軸回転 → ROSのY軸回転（符号そのまま）
-            yaw_ros = -yaw_imu  # Yaw は符号反転
+            # 観測結果に合わせて ROS 座標系に変換(いまは何もしていない)
+            roll_ros = roll_imu
+            pitch_ros = pitch_imu
+            yaw_ros = yaw_imu
 
             qua = quaternion_from_euler(roll_ros, pitch_ros, yaw_ros)
 
