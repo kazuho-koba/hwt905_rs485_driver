@@ -45,7 +45,7 @@ class Hwt905ImuNode(Node):
         self.declare_parameter("baud", 115200)
         self.declare_parameter("slave_id", 80)  # modbusスレーブID（0x50）
         self.declare_parameter("frame_id", "base_link")
-        self.declare_parameter("poll_hz", 200.0)  # 読み取り周期
+        self.declare_parameter("poll_hz", 100.0)  # 読み取り周期
 
         self.port = self.get_parameter("port").get_parameter_value().string_value
         self.baud = self.get_parameter("baud").get_parameter_value().integer_value
