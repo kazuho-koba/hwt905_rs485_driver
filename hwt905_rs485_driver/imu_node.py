@@ -185,22 +185,22 @@ class Hwt905ImuNode(Node):
             # covariance
             self.imu_msg.orientation_covariance = [-1.0] + [0.0] * 8
             self.imu_msg.angular_velocity_covariance = [
-                3e-08,
-                0.0,
-                0.0,
-                0.0,
                 5e-08,
+                0.0,
+                0.0,
+                0.0,
+                3e-08,
                 0.0,
                 0.0,
                 0.0,
                 6e-08,
             ]
             self.imu_msg.linear_acceleration_covariance = [
-                8e-06,
-                0.0,
-                0.0,
-                0.0,
                 6e-06,
+                0.0,
+                0.0,
+                0.0,
+                8e-06,
                 0.0,
                 0.0,
                 0.0,
