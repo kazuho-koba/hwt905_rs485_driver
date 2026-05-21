@@ -146,10 +146,10 @@ class Hwt905ImuNode(Node):
             pitch_imu = angle_radian[1]  # IMU Y軸まわり
             yaw_imu = angle_radian[2]  # IMU Z軸まわり
 
-            # 観測結果に合わせて ROS 座標系に変換(いまは何もしていない)
+            # 観測結果に合わせて ROS 座標系に変換
             roll_ros = roll_imu
             pitch_ros = pitch_imu
-            yaw_ros = yaw_imu
+            yaw_ros = yaw_imu - math.pi/2.0
 
             qua = quaternion_from_euler(roll_ros, pitch_ros, yaw_ros)
 
@@ -167,14 +167,14 @@ class Hwt905ImuNode(Node):
             self.imu_msg.orientation.z = qua[2]
             self.imu_msg.orientation.w = qua[3]
 
-            # angular velocity
-            self.imu_msg.angular_velocity.x = angular_velocity[0]
-            self.imu_msg.angular_velocity.y = angular_velocity[1]
+            # angular velocity（本来は0,1,2の順に代入するが、ROS座標系に合わせるため入れ替え）
+            self.imu_msg.angular_velocity.x = -angular_velocity[1]
+            self.imu_msg.angular_velocity.y = angular_velocity[0]
             self.imu_msg.angular_velocity.z = angular_velocity[2]
 
-            # linear acceleration
-            self.imu_msg.linear_acceleration.x = acceleration[0]
-            self.imu_msg.linear_acceleration.y = acceleration[1]
+            # linear acceleration（本来は0,1,2の順に代入するが、ROS座標系に合わせるため入れ替え）
+            self.imu_msg.linear_acceleration.x = -acceleration[1]
+            self.imu_msg.linear_acceleration.y = acceleration[0]
             self.imu_msg.linear_acceleration.z = acceleration[2]
 
             # magnetic field
