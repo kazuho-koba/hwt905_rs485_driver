@@ -149,7 +149,7 @@ class Hwt905ImuNode(Node):
             # 観測結果に合わせて ROS 座標系に変換
             roll_ros = roll_imu
             pitch_ros = pitch_imu
-            yaw_ros = yaw_imu - math.pi/2.0
+            yaw_ros = yaw_imu # - math.pi/2.0
 
             qua = quaternion_from_euler(roll_ros, pitch_ros, yaw_ros)
 
@@ -183,7 +183,11 @@ class Hwt905ImuNode(Node):
             self.mag_msg.magnetic_field.z = float(magnetometer[2])
 
             # covariance
-            self.imu_msg.orientation_covariance = [-1.0] + [0.0] * 8
+            self.imu_msg.orientation_covariance = [
+                0.01, 0.0,  0.0,
+                0.0,  0.01, 0.0,
+                0.0,  0.0,  0.1,
+            ]
             self.imu_msg.angular_velocity_covariance = [
                 5e-08,
                 0.0,
