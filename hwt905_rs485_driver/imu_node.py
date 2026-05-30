@@ -149,7 +149,7 @@ class Hwt905ImuNode(Node):
             # 観測結果に合わせて ROS 座標系に変換
             roll_ros = roll_imu
             pitch_ros = pitch_imu
-            yaw_ros = yaw_imu # - math.pi/2.0
+            yaw_ros = yaw_imu - math.pi/2.0
 
             qua = quaternion_from_euler(roll_ros, pitch_ros, yaw_ros)
 
