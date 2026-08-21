@@ -110,18 +110,21 @@ class Hwt905ImuNode(Node):
 
         period = 1.0 / self.poll_hz if self.poll_hz > 0.0 else 0.005
 
+        # 絶対時刻ベースで次回実行予定時刻を管理する
+        next_time = time.perf_counter()
+
         while rclpy.ok() and self._running:
-            start_time = time.time()
             try:
                 # レジスタ52から12個（加速度3、角速度3、磁気3、オイラー角3）
-                # start_time = time.perf_counter()
                 reg = self.master.execute(
                     self.slave_id, cst.READ_HOLDING_REGISTERS, 52, 12
                 )
-                # mid_time = time.perf_counter()
             except Exception as e:
                 self.get_logger().warn(f"レジスタ読み取りに失敗しました。接続やボーレートを確認してください：{e}")
                 time.sleep(0.1)
+
+                # 長時間待機後は周期基準をリセットする
+                next_time = time.perf_counter()
                 continue
 
             # 16bitレジスタを符号付きに変換
@@ -214,17 +217,19 @@ class Hwt905ImuNode(Node):
             self.imu_pub.publish(self.imu_msg)
             self.mag_pub.publish(self.mag_msg)
 
-            # end_time = time.perf_counter()
-            # self.get_logger().info(
-            #     f"modbus: {(mid_time - start_time)*1000:.2f} ms, "
-            #     f"proc+pub: {(end_time - mid_time)*1000:.2f} ms"
-            # )
 
-            # 周期調整
-            elapsed = time.time() - start_time
-            sleep_time = period - elapsed
+            # 次回の絶対実行予定時刻を更新
+            next_time += period
+
+            now = time.perf_counter()
+            sleep_time = next_time - now
+
             if sleep_time > 0:
                 time.sleep(sleep_time)
+            else:
+                # 処理遅延などで予定時刻をすでに超過した場合、
+                # 過去のdeadlineを追いかけず、次の周期基準を現在時刻から再設定する
+                next_time = now
 
         self.get_logger().info("IMU読み取りループを終了します")
 
