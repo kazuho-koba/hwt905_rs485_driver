@@ -50,6 +50,9 @@ def generate_launch_description():
                 "baud": LaunchConfiguration("baud"),
                 "frame_id": LaunchConfiguration("frame_id"),
                 "poll_hz":LaunchConfiguration("poll_hz"),
+                "timing_diagnostics": LaunchConfiguration("timing_diagnostics"),
+                "timing_csv": LaunchConfiguration("timing_csv"),
+                "timing_max_samples": LaunchConfiguration("timing_max_samples"),
             }
         ],
     )
@@ -70,6 +73,10 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
+            # 試験時だけメモリ上へ周期診断を記録し、正常終了時にCSV保存する。
+            DeclareLaunchArgument("timing_diagnostics", default_value="false"),
+            DeclareLaunchArgument("timing_csv", default_value=""),
+            DeclareLaunchArgument("timing_max_samples", default_value="60000"),
             port_arg,
             baud_arg,
             frame_id_arg,

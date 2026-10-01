@@ -1,6 +1,7 @@
 import math
 import threading
 import time
+from .timing_diagnostics import TimingDiagnostics
 
 import rclpy
 from rclpy.node import Node
@@ -38,6 +39,7 @@ class Hwt905ImuNode(Node):
     """
 
     def __init__(self):
+        node_started = time.perf_counter()
         super().__init__("hwt905_imu_node")
 
         # パラメータ宣言（launchから上書き可）
@@ -46,6 +48,18 @@ class Hwt905ImuNode(Node):
         self.declare_parameter("slave_id", 80)  # modbusスレーブID（0x50）
         self.declare_parameter("frame_id", "base_link")
         self.declare_parameter("poll_hz", 100.0)  # 読み取り周期
+        # 無効時はCSVも追加時刻計測も行わない。記録は終了時に一括保存する。
+        self.declare_parameter("timing_diagnostics", False)
+        self.declare_parameter("timing_csv", "")
+        self.declare_parameter("timing_max_samples", 60000)
+        self.declare_parameter("timing_startup_seconds", 20.0)
+        self._timing = None
+        if self.get_parameter("timing_diagnostics").value:
+            self._timing = TimingDiagnostics(
+                self.get_parameter("timing_csv").value,
+                self.get_parameter("timing_max_samples").value,
+                self.get_parameter("timing_startup_seconds").value, node_started)
+            self.get_logger().info("周期診断CSV: " + str(self._timing.path))
 
         self.port = self.get_parameter("port").get_parameter_value().string_value
         self.baud = self.get_parameter("baud").get_parameter_value().integer_value
@@ -75,6 +89,8 @@ class Hwt905ImuNode(Node):
         self.master = None
         self._serial = None
         self._open_serial_and_modbus()
+        if self._timing is not None:
+            self._timing.mark('connection_finished_s' if self.master is not None else 'connection_failed_s')
 
         # 読み取りループ用スレッド
         self._running = True
@@ -112,14 +128,22 @@ class Hwt905ImuNode(Node):
 
         # 絶対時刻ベースで次回実行予定時刻を管理する
         next_time = time.perf_counter()
+        if self._timing is not None:
+            self._timing.mark('read_loop_start_s')
 
         while rclpy.ok() and self._running:
+            if self._timing is not None:
+                cycle_start = time.perf_counter()
+                scheduled_start = next_time
             try:
                 # レジスタ52から12個（加速度3、角速度3、磁気3、オイラー角3）
                 reg = self.master.execute(
                     self.slave_id, cst.READ_HOLDING_REGISTERS, 52, 12
                 )
             except Exception as e:
+                if self._timing is not None:
+                    self._timing.add(cycle_start, scheduled_start, period,
+                                     time.perf_counter(), None, None, None, "read_error")
                 self.get_logger().warn(f"レジスタ読み取りに失敗しました。接続やボーレートを確認してください：{e}")
                 time.sleep(0.1)
 
@@ -128,6 +152,8 @@ class Hwt905ImuNode(Node):
                 continue
 
             # 16bitレジスタを符号付きに変換
+            if self._timing is not None:
+                read_end = time.perf_counter()
             v = [0] * 12
             for i in range(12):
                 if reg[i] > 32767:
@@ -214,8 +240,12 @@ class Hwt905ImuNode(Node):
                 4e-06,
             ]
             # Publish
+            if self._timing is not None:
+                conversion_end = time.perf_counter()
             self.imu_pub.publish(self.imu_msg)
             self.mag_pub.publish(self.mag_msg)
+            if self._timing is not None:
+                publish_end = time.perf_counter()
 
 
             # 次回の絶対実行予定時刻を更新
@@ -223,6 +253,9 @@ class Hwt905ImuNode(Node):
 
             now = time.perf_counter()
             sleep_time = next_time - now
+            if self._timing is not None:
+                self._timing.add(cycle_start, scheduled_start, period, read_end,
+                                 conversion_end, publish_end, now, "ok")
 
             if sleep_time > 0:
                 time.sleep(sleep_time)
@@ -237,7 +270,13 @@ class Hwt905ImuNode(Node):
         """ノード終了時のクリーンアップ"""
         self._running = False
         if hasattr(self, "_thread") and self._thread.is_alive():
-            self._thread.join(timeout=1.0)
+            # Modbus timeout中もworker終了を待ち、CSV保存中の競合を防ぐ。
+            self._thread.join()
+        if self._timing is not None:
+            try:
+                self._timing.save()
+            except OSError as exc:
+                self.get_logger().error("周期診断CSV保存失敗: " + str(exc))
         if self.master is not None:
             try:
                 self.master.close()
@@ -248,7 +287,7 @@ class Hwt905ImuNode(Node):
                 self._serial.close()
             except Exception:
                 pass
-        super().destroy_node
+        super().destroy_node()
 
 
 def main(args=None):
